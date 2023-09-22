@@ -1,31 +1,31 @@
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// Licensed under the MIT License.
+const { OpenAI } = require("openai");
+const { ActivityHandler, MessageFactory } = require("botbuilder");
+const axios = require("axios");
+require("dotenv").config;
 
-const { ActivityHandler, MessageFactory } = require('botbuilder');
+const openai = new OpenAI({
+  apiKey: process.env.CHATGPT_TOKEN,
+});
 
-class EchoBot extends ActivityHandler {
-    constructor() {
-        super();
-        // See https://aka.ms/about-bot-activity-message to learn more about the message and other activity types.
-        this.onMessage(async (context, next) => {
-            const replyText = `Echo: ${ context.activity.text }`;
-            await context.sendActivity(MessageFactory.text(replyText, replyText));
-            // By calling next() you ensure that the next BotHandler is run.
-            await next();
-        });
+class MyBot extends ActivityHandler {
+  constructor() {
+    super();
 
-        this.onMembersAdded(async (context, next) => {
-            const membersAdded = context.activity.membersAdded;
-            const welcomeText = 'Hello and welcome!';
-            for (let cnt = 0; cnt < membersAdded.length; ++cnt) {
-                if (membersAdded[cnt].id !== context.activity.recipient.id) {
-                    await context.sendActivity(MessageFactory.text(welcomeText, welcomeText));
-                }
-            }
-            // By calling next() you ensure that the next BotHandler is run.
-            await next();
-        });
-    }
+    this.onMessage(async (context, next) => {
+      const userMessage = context.activity.text;
+
+      // ChatGPTにリクエストを送信
+      const response = await openai.chat.completions.create({
+        messages: [{ role: "user", content: `${userMessage}` }],
+        model: "gpt-3.5-turbo",
+      });
+
+      // ChatGPTからの応答をユーザーに送信
+      await context.sendActivity(response.choices[0].message.content);
+
+      await next();
+    });
+  }
 }
 
-module.exports.EchoBot = EchoBot;
+module.exports.MyBot = MyBot;
